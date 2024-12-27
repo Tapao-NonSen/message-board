@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Control</title>
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    /* Global Styles */
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #181818;
+      color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 20px;
+      color: #ffffff;
+    }
+
+    /* Form Styles */
+    form {
+      background: #222222;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    label,
+    input,
+    textarea,
+    button {
+      font-size: 1em;
+      width: 100%;
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    label {
+      color: #e0e0e0;
+      font-weight: 500;
+    }
+
+    input,
+    textarea {
+      background: #333;
+      color: #e0e0e0;
+      border: 1px solid #444;
+    }
+
+    button {
+      background: #444;
+      color: #f5f5f5;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #666;
+    }
+
+    /* Flexible and Resizable Textarea */
+    textarea {
+      resize: vertical;
+      /* Allows manual resizing */
+      min-height: 100px;
+      /* Minimum height */
+      max-height: 400px;
+      /* Maximum height */
+      height: auto;
+      /* Auto-adjust based on content */
+    }
+
+    /* Auth Form Styles */
+    #auth-form {
+      display: block;
+    }
+
+    #admin-panel {
+      display: none;
+    }
+
+    /* Footer */
+    .footer {
+      position: fixed;
+      bottom: 10px;
+      color: #aaaaaa;
+      font-size: 0.8em;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="auth-form">
+    <h1>Admin Control Panel</h1>
+    <form id="login-form">
+      <label for="password">Admin Password:</label>
+      <input type="password" id="password" required>
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
+  <div id="admin-panel">
+    <h1>Admin Panel</h1>
+    <form id="update-form">
+      <label for="messages">Messages (JSON Array):</label>
+      <textarea id="messages"></textarea>
+
+      <label for="interval">Interval (in milliseconds):</label>
+      <input type="number" id="interval" required>
+
+      <button type="submit">Update</button>
+    </form>
+  </div>
+
+  <div class="footer">
+    <p>© KKUSpace.com - All Rights Reserved</p>
+  </div>
+
+  <script>
+    const authForm = document.getElementById("auth-form");
+    const adminPanel = document.getElementById("admin-panel");
+    const loginForm = document.getElementById("login-form");
+    const updateForm = document.getElementById("update-form");
+
+    // Login Handler
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const password = document.getElementById("password").value;
+
+      const response = await fetch("/admin/authenticate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      if (response.ok) {
+        alert("Login successful!");
+        authForm.style.display = "none";
+        adminPanel.style.display = "block";
+        fetchData();
+      } else {
+        alert("Incorrect password!");
+      }
+    });
+
+    // Fetch Existing Data
+    async function fetchData() {
+      const response = await fetch("/admin/data");
+      if (response.ok) {
+        const data = await response.json();
+        document.getElementById("messages").value = JSON.stringify(data.messages || [], null, 3);
+        document.getElementById("interval").value = data.interval || 5000;
+      } else {
+        alert("Failed to fetch data!");
+      }
+    }
+
+    // Update Data Handler
+    updateForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const messages = JSON.parse(document.getElementById("messages").value);
+      const interval = parseInt(document.getElementById("interval").value, 10);
+
+      const response = await fetch("/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages, interval }),
+      });
+
+      if (response.ok) {
+        alert("Data updated successfully!");
+      } else {
+        alert("Failed to update data!");
+      }
+    });
+
+    let SHEET_ID, API_KEY;
+
+    async function loadConfig() {
+      const response = await fetch('/api/config');
+      if (response.ok) {
+        const config = await response.json();
+        SHEET_ID = config.sheetId;
+        API_KEY = config.apiKey;
+      } else {
+        console.error('Failed to load config.');
+      }
+    }
+
+    async function fetchSheetData() {
+      if (!SHEET_ID || !API_KEY) {
+        console.error('API Key or Sheet ID not loaded.');
+        return;
+      }
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B10?key=${API_KEY}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Failed to fetch data from Google Sheets');
+      }
+      const data = await response.json();
+      return data.values || [];
+    }
+
+    async function findValue() {
+      try {
+        await loadConfig(); // Ensure keys are loaded before fetching data
+        const searchKey = document.getElementById("search-key").value.trim().toLowerCase();
+        if (!searchKey) {
+          document.getElementById("sheet-results").textContent = 'Please enter a search key.';
+          return;
+        }
+
+        const data = await fetchSheetData();
+        const result = data.find(row => row[0].toLowerCase() === searchKey);
+
+        document.getElementById("sheet-results").textContent = result
+          ? `Key: ${result[0]}, Value: ${result[1]}`
+          : 'No match found.';
+      } catch (error) {
+        document.getElementById("sheet-results").textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submit Messages or Images</title>
+  <link rel="shortcut icon" href="https://kkuspace.com/assets/favicon-qbbvmi0s.png">
+  <meta name="robots" content="noindex, nofollow">
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="sweetalert2.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+    rel="stylesheet">
+  <style>
+    /* General Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Kanit', sans-serif;
+      background-color: #121212;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 20px;
+      color: #ffffff;
+    }
+
+    form {
+      max-width: 400px;
+      width: 100%;
+      background-color: #1e1e1e;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.9em;
+      color: #b0b0b0;
+    }
+
+    select,
+    textarea,
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #2a2a2a;
+      color: #e0e0e0;
+      font-size: 1em;
+    }
+
+    textarea {
+      resize: none;
+      height: 80px;
+    }
+
+    select:focus,
+    textarea:focus,
+    button:focus {
+      outline: none;
+      border-color: #6200ea;
+      box-shadow: 0 0 5px #6200ea;
+    }
+
+    button {
+      background: #6200ea;
+      color: #ffffff;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background: #3700b3;
+    }
+
+    .message-entry {
+      margin-bottom: 20px;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 0.8em;
+      color: #aaaaaa;
+    }
+
+    a:link {
+      color: #aaaaaa;
+      background-color: transparent;
+      text-decoration: none;
+    }
+
+    a:visited {
+      color: white;
+      background-color: transparent;
+      text-decoration: none;
+    }
+
+    a:hover {
+      color: skyblue;
+      background-color: transparent;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <form id="submission-form" enctype="multipart/form-data">
+    <div id="message-entries">
+      <div class="message-entry">
+        <label for="type">ประเภท:</label>
+        <select class="type" required onchange="toggleInputType(this)">
+          <option value="message">ข้อความ</option>
+          <option value="image">รูปภาพ</option>
+        </select>
+
+        <label for="author">ชื่อ:</label>
+        <textarea class="author" placeholder="ชื่อของคุณ" maxlength="20">ไม่ระบุตัวตน</textarea>
+
+        <label for="content" class="content-label">เนื้อหา:</label>
+        <textarea class="content" placeholder="ใส่ข้อความ" maxlength="300" required></textarea>
+        <input class="image-upload" type="file" accept=".png, .jpg, .jpeg" style="display: none; padding-bottom: 10px;">
+        <center>
+          <div class="cf-turnstile" data-sitekey="0x4AAAAAAA1tplhs77o_OyoR"></div>
+        </center>
+      </div>
+    </div>
+    <button type="submit">ส่งเลย!</button>
+    <div class="footer">© <a href="kkuspace.com">KKUSpace.com</a> - All Rights Reserved</div>
+  </form>
+
+  <script>
+    function sanitizeInput(input) {
+      const element = document.createElement('div');
+      if (input) {
+        element.innerText = input;
+        return element.innerHTML;
+      }
+      return '';
+    }
+
+    // Toggle between text and file input
+    function toggleInputType(select) {
+      const parent = select.closest('.message-entry');
+      const textArea = parent.querySelector('.content');
+      const fileInput = parent.querySelector('.image-upload');
+
+      if (select.value === "image") {
+        textArea.style.display = "none";
+        fileInput.style.display = "block";
+        textArea.removeAttribute("required"); // Remove `required` from hidden field
+        fileInput.setAttribute("required", "required"); // Add `required` to visible field
+      } else {
+        textArea.style.display = "block";
+        fileInput.style.display = "none";
+        fileInput.removeAttribute("required"); // Remove `required` from hidden field
+        textArea.setAttribute("required", "required"); // Add `required` to visible field
+      }
+    }
+
+    document.getElementById("submission-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData();
+      const types = document.querySelectorAll(".type");
+      const authors = document.querySelectorAll(".author");
+      const contents = document.querySelectorAll(".content");
+      const fileInputs = document.querySelectorAll(".image-upload");
+      const captchaResponse = document.querySelector("[name='cf-turnstile-response']").value;
+
+      formData.append("cf-turnstile-response", captchaResponse);
+
+      let valid = true;
+      const submittedIDs = [];
+
+      for (let i = 0; i < types.length; i++) {
+        const type = types[i].value;
+        const author = sanitizeInput(authors[i].value || "ไม่ระบุตัวตน");
+        const ID = Math.floor(Math.random() * 9999) + 1111; // Generate unique ID for each message
+        submittedIDs.push(ID);
+
+        if (type === "image") {
+          const file = fileInputs[i].files[0];
+          if (!file) {
+            Swal.fire({
+              icon: "error",
+              title: "กรุณาอัพโหลดรูปภาพ",
+              text: "คุณยังไม่ได้เลือกไฟล์สำหรับการส่ง",
+            });
+            valid = false;
+            break;
+          }
+          formData.append("author", author); // Add author name to FormData
+          formData.append("ID", ID);        // Add ID to FormData
+          formData.append("image", file); // Add the image file to FormData
+        } else {
+          const content = sanitizeInput(contents[i].value);
+          if (!content) {
+            Swal.fire({
+              icon: "error",
+              title: "กรุณาใส่ข้อความ",
+              text: "เนื้อหาของคุณยังว่างอยู่",
+            });
+            valid = false;
+            break;
+          }
+          formData.append("messages", JSON.stringify({ type, content, author, ID })); // Add the text message
+        }
+      }
+
+      if (!valid) return;
+
+      try {
+        const response = await fetch("/data/submit", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (response.ok) {
+          Swal.fire({
+            title: "ส่งข้อความแล้ว!",
+            text: `ข้อความของคุณจะเเสดงอัตโนมัติตามคิว ไอดีโพสต์: ${submittedIDs.join(", ")}`,
+            icon: "success",
+          }).then(() => {
+            window.location.reload();
+          });
+        } else {
+          const error = await response.json();
+          Swal.fire({
+            icon: "error",
+            title: "เกิดข้อผิดพลาด",
+            text: error.error || "กรุณาตรวจสอบอีกครั้งในภายหลัง",
+          }).then(() => {
+            window.location.reload();
+          });
+        }
+      } catch (err) {
+        console.error("Error submitting form:", err);
+        Swal.fire({
+          icon: "error",
+          title: "เกิดข้อผิดพลาด",
+          text: "ไม่สามารถส่งข้อมูลได้ในขณะนี้",
+        }).then(() => {
+          window.location.reload();
+        });
+      }
+    });
+  </script>
+</body>
+
+</html>
